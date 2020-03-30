@@ -1,5 +1,5 @@
 import sys
-import json
+from firebase import firebase
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel
 from PyQt5.QtWidgets import QLineEdit
 
@@ -48,15 +48,15 @@ class NewUser(QWidget):
         self.add_group_btn.move(75, 310)
         self.add_group_btn.clicked.connect(self.add_group)
 
-        self.btn = QPushButton('Добавить в базу', self)
-        self.btn.resize(self.btn.sizeHint())
-        self.btn.move(40, 380)
-        self.btn.clicked.connect(self.user_init)
+        self.btn1 = QPushButton('Добавить в базу', self)
+        self.btn1.resize(self.btn1.sizeHint())
+        self.btn1.move(40, 380)
+        self.btn1.clicked.connect(self.user_init)
 
-        self.btn = QPushButton('Завершить', self)
-        self.btn.resize(self.btn.sizeHint())
-        self.btn.move(275, 380)
-        self.btn.clicked.connect(self.close_all)
+        self.btn2 = QPushButton('Завершить', self)
+        self.btn2.resize(self.btn2.sizeHint())
+        self.btn2.move(275, 380)
+        self.btn2.clicked.connect(self.close_all)
 
     def add_group(self):
         if self.group_gap.text() == '':
@@ -76,18 +76,16 @@ class NewUser(QWidget):
         self.user.barcode = int(self.user.barcode)
         self.barcode_gap.setText('')
         self.user.groups = list(set(self.user.groups))
-        self.send(self.convert_to_json())
+        self.send()
 
-    def convert_to_json(self):
-        user_dict = {}
-        user_dict['email'] = self.user.email
-        user_dict['barcode'] = self.user.barcode
-        user_dict['groups'] = self.user.groups
-        return json.dumps(user_dict)
-
-    def send(self, json_file):
-        # отправить json_file нового пользователя на сервер
-        pass
+    def send(self):
+        data = {
+            'code': self.user.barcode,
+            'groups': {}
+        }
+        for id in self.user.groups:
+            data['groups'][id] = id
+        base.put('/users/', self.user.email, data)
 
     def close_all(self):
         sys.exit(app.exec_())
@@ -106,7 +104,7 @@ class NewGroup(QWidget):
 
     def initUI(self):
         self.setGeometry(100, 100, 450, 400)
-        self.setWindowTitle('Новая группа')
+        self.setWindowTitle('Новые группы')
 
         self.group = Group()
 
@@ -129,15 +127,15 @@ class NewGroup(QWidget):
         self.add_member_btn.move(75, 210)
         self.add_member_btn.clicked.connect(self.add_member)
 
-        self.btn = QPushButton('Добавить в базу', self)
-        self.btn.resize(self.btn.sizeHint())
-        self.btn.move(40, 280)
-        self.btn.clicked.connect(self.group_init)
+        self.btn1 = QPushButton('Добавить в базу', self)
+        self.btn1.resize(self.btn1.sizeHint())
+        self.btn1.move(40, 280)
+        self.btn1.clicked.connect(self.group_init)
 
-        self.btn = QPushButton('Завершить', self)
-        self.btn.resize(self.btn.sizeHint())
-        self.btn.move(275, 280)
-        self.btn.clicked.connect(self.close_all)
+        self.btn2 = QPushButton('Завершить', self)
+        self.btn2.resize(self.btn2.sizeHint())
+        self.btn2.move(275, 280)
+        self.btn2.clicked.connect(self.close_all)
 
     def add_member(self):
         new_member = self.member_gap.text()
@@ -153,17 +151,124 @@ class NewGroup(QWidget):
             return
         self.name_gap.setText('')
         self.group.members = list(set(self.group.members))
-        self.send(self.convert_to_json())
+        self.send()
 
-    def convert_to_json(self):
-        group_dict = {}
-        group_dict['name'] = self.group.name
-        group_dict['members'] = self.group.members
-        return json.dumps(group_dict)
+    def send(self):
+        data = {
+            'users': {}
+        }
+        for email in self.group.members:
+            data['users'][email] = email
+        base.put('/groups/', self.group.name, data)
 
-    def send(self, json_file):
-        # отправить json_file новой группы на сервер
-        pass
+    def close_all(self):
+        sys.exit(app.exec_())
+
+
+class Event():
+    def __init__(self):
+        self.name = ''
+        self.description = ''
+        self.groups = []
+        self.is_optional = False
+        self.place = ''
+
+
+class NewEvent(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setGeometry(100, 100, 550, 700)
+        self.setWindowTitle('Новые события')
+
+        self.event = Event()
+
+        self.name_label = QLabel(self)
+        self.name_label.setText('Название:')
+        self.name_label.move(80, 30)
+
+        self.name_gap = QLineEdit(self)
+        self.name_gap.move(80, 70)
+
+        self.description_label = QLabel(self)
+        self.description_label.setText('Описание:')
+        self.description_label.move(80, 130)
+
+        self.description_gap = QLineEdit(self)
+        self.description_gap.move(80, 170)
+
+        self.group_label = QLabel(self)
+        self.group_label.setText('По одному введите названия приглашенных групп:')
+        self.group_label.move(80, 230)
+
+        self.group_gap = QLineEdit(self)
+        self.group_gap.move(80, 270)
+
+        self.add_group_btn = QPushButton('Добавить группу', self)
+        self.add_group_btn.resize(self.add_group_btn.sizeHint())
+        self.add_group_btn.move(75, 310)
+        self.add_group_btn.clicked.connect(self.add_group)
+
+        self.optional_label = QLabel(self)
+        self.optional_label.setText('1 если мероприятие необязательное к посещению, иначе 0:')
+        self.optional_label.move(80, 370)
+
+        self.optional_gap = QLineEdit(self)
+        self.optional_gap.move(80, 410)
+
+        self.place_label = QLabel(self)
+        self.place_label.setText('Место проведения:')
+        self.place_label.move(80, 470)
+
+        self.place_gap = QLineEdit(self)
+        self.place_gap.move(80, 510)
+
+        self.btn1 = QPushButton('Добавить в базу', self)
+        self.btn1.resize(self.btn1.sizeHint())
+        self.btn1.move(40, 580)
+        self.btn1.clicked.connect(self.event_init)
+
+        self.btn2 = QPushButton('Завершить', self)
+        self.btn2.resize(self.btn2.sizeHint())
+        self.btn2.move(275, 580)
+        self.btn2.clicked.connect(self.close_all)
+
+    def add_group(self):
+        new_group = self.group_gap.text()
+        if new_group == '':
+            return
+        self.event.groups.append(new_group)
+        self.group_gap.setText('')
+
+    def event_init(self):
+        self.event.name = self.name_gap.text()
+        if self.event.name == '':
+            return
+        self.name_gap.setText('')
+        self.event.description = self.description_gap.text()
+        self.description_gap.setText('')
+        self.event.groups = list(set(self.event.groups))
+        if self.optional_gap.text() != '0':
+            self.event.is_optional = True
+        else:
+            self.event.is_optional = False
+        self.optional_gap.setText('')
+        self.event.place = self.place_gap.text()
+        self.place_gap.setText('')
+        self.send()
+
+    def send(self):
+        data = {
+            'description': self.event.description,
+            'invited_groups': {},
+            'is_optional': self.event.is_optional,
+            'place': self.event.place
+        }
+        for id in self.event.groups:
+            data['invited_groups'][id] = id
+        base.put('/events/', self.event.name, data)
 
     def close_all(self):
         sys.exit(app.exec_())
@@ -201,11 +306,12 @@ class MainWidget(QWidget):
         self.open_group_wind.show()
 
     def new_event(self):
-        # вызов окна для добавления нового мероприятия
-        pass
+        self.open_event_wind = NewEvent()
+        self.open_event_wind.show()
 
 
 if __name__ == '__main__':
+    base = firebase.FirebaseApplication("https://innoapp-acb78.firebaseio.com/", None)
     app = QApplication(sys.argv)
     wid = MainWidget()
     wid.show()
